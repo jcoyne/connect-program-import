@@ -1,8 +1,13 @@
 package main
 
 import "fmt"
+import "flag"
 import "log"
+import "os"
 import "github.com/PuerkitoBio/goquery"
+import "golang.org/x/oauth2"
+import "context"
+import "github.com/google/go-github/github"
 
 type Talk struct {
   title string
@@ -10,18 +15,14 @@ type Talk struct {
   format string
   suggestedBy string
   presenter string
-  source string
 }
 
-func ScrapeWiki(url string) {
+func ScrapeWiki(url string) []Talk{
   doc := LoadDocument(url)
-  // The table for self volunteered talks
-  ImportTable(doc.Find("table.confluenceTable:nth-child(1)"), "volunteer")
-  // The table for suggested talks
-  ImportTable(doc.Find("table.confluenceTable:nth-child(2)"), "suggestion")
+  return ImportTable(doc.Find("table.confluenceTable"))
 }
 
-func ImportTable(table *goquery.Selection, source string) []Talk {
+func ImportTable(table *goquery.Selection) []Talk {
   var talks []Talk
   table.Find("tbody tr").Each(func(i int, row *goquery.Selection) {
     talk := new(Talk)
@@ -30,10 +31,8 @@ func ImportTable(table *goquery.Selection, source string) []Talk {
     talk.format = row.Find("td:nth-child(3)").Text()
     talk.suggestedBy = row.Find("td:nth-child(4)").Text()
     talk.presenter = row.Find("td:nth-child(5)").Text()
-    talk.source = source
     if talk.title != "" {
       talks = append(talks, *talk)
-      fmt.Printf("Title %d: %s, %s\n", i, talk.title, talk.audience)
     }
   })
   return talks
@@ -47,6 +46,57 @@ func LoadDocument(url string) *goquery.Document {
   return doc
 }
 
+func usage() {
+    fmt.Fprintf(os.Stderr, "usage: import [ACCESS_TOKEN]\n")
+    flag.PrintDefaults()
+    os.Exit(2)
+}
+
+func GetAccessToken() string {
+  flag.Usage = usage
+  flag.Parse()
+
+  args := flag.Args()
+  if len(args) < 1 {
+      fmt.Println("Access token is missing.")
+      os.Exit(1)
+  }
+  return args[0]
+}
+
+func InitClient(ctx context.Context, token string) *github.Client {
+  ts := oauth2.StaticTokenSource(
+    &oauth2.Token{AccessToken: token},
+  )
+  tc := oauth2.NewClient(ctx, ts)
+
+  return github.NewClient(tc)
+}
+
+func NewIssue(talk Talk) *github.IssueRequest {
+  req := new(github.IssueRequest)
+  req.Title = &talk.title
+  body := fmt.Sprintf("%s\n\nSuggested by: %s\nPresenter: %s\nFormat: %s\nAudience: %s", talk.title, talk.suggestedBy, talk.presenter, talk.format, talk.audience)
+  req.Body = &body
+  return req
+}
+
+func CreateIssues(token string, talks []Talk) {
+  ctx := context.Background()
+  client := InitClient(ctx, token)
+  for _, talk := range talks {
+    req := NewIssue(talk)
+    issue, _, err := client.Issues.Create(ctx, "jcoyne", "bl-test", req)
+    if err != nil {
+      fmt.Printf("ERROR %s", err)
+      os.Exit(1)
+    }
+    fmt.Printf("ISSUE %s", issue)
+  }
+}
+
 func main() {
-  ScrapeWiki("https://wiki.duraspace.org/display/samvera/Suggestions+for+Samvera+Connect+2017+Program")
+  token := GetAccessToken()
+  talks := ScrapeWiki("https://wiki.duraspace.org/display/samvera/Suggestions+for+Samvera+Connect+2017+Program")
+  CreateIssues(token, talks)
 }
