@@ -3,6 +3,7 @@
 ## Building
 
 ```
+% go get golang.org/x/net/html
 % go build import.go
 ```
 
