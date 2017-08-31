@@ -17,6 +17,10 @@ type Talk struct {
 	presenter   string
 }
 
+func (talk Talk) String() string {
+	return fmt.Sprintf("%s\n\nSuggested by: %s\nPresenter: %s\nFormat: %s\nAudience: %s", talk.title, talk.suggestedBy, talk.presenter, talk.format, talk.audience)
+}
+
 func ScrapeWiki(url string) []Talk {
 	doc := LoadDocument(url)
 	return ImportTable(doc.Find("table.confluenceTable"))
@@ -76,7 +80,7 @@ func InitClient(ctx context.Context, token string) *github.Client {
 func NewIssue(talk Talk) *github.IssueRequest {
 	req := new(github.IssueRequest)
 	req.Title = &talk.title
-	body := fmt.Sprintf("%s\n\nSuggested by: %s\nPresenter: %s\nFormat: %s\nAudience: %s", talk.title, talk.suggestedBy, talk.presenter, talk.format, talk.audience)
+	body := fmt.Sprintf("%s", talk)
 	req.Body = &body
 	return req
 }
