@@ -29,12 +29,13 @@ func ScrapeWiki(url string) []Talk {
 func ImportTable(table *goquery.Selection) []Talk {
 	var talks []Talk
 	table.Find("tbody tr").Each(func(i int, row *goquery.Selection) {
-		talk := new(Talk)
-		talk.title = row.Find("td:nth-child(1)").Text()
-		talk.audience = row.Find("td:nth-child(2)").Text()
-		talk.format = row.Find("td:nth-child(3)").Text()
-		talk.suggestedBy = row.Find("td:nth-child(4)").Text()
-		talk.presenter = row.Find("td:nth-child(5)").Text()
+		talk := &Talk{
+			title:       row.Find("td:nth-child(1)").Text(),
+			audience:    row.Find("td:nth-child(2)").Text(),
+			format:      row.Find("td:nth-child(3)").Text(),
+			suggestedBy: row.Find("td:nth-child(4)").Text(),
+			presenter:   row.Find("td:nth-child(5)").Text(),
+		}
 		if talk.title != "" {
 			talks = append(talks, *talk)
 		}
