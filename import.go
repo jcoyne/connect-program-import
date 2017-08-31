@@ -1,13 +1,16 @@
 package main
 
-import "fmt"
-import "flag"
-import "log"
-import "os"
-import "github.com/PuerkitoBio/goquery"
-import "golang.org/x/oauth2"
-import "context"
-import "github.com/google/go-github/github"
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/google/go-github/github"
+	"golang.org/x/oauth2"
+)
 
 type Talk struct {
 	title       string
@@ -21,9 +24,12 @@ func (talk Talk) String() string {
 	return fmt.Sprintf("%s\n\nSuggested by: %s\nPresenter: %s\nFormat: %s\nAudience: %s", talk.title, talk.suggestedBy, talk.presenter, talk.format, talk.audience)
 }
 
-func ScrapeWiki(url string) []Talk {
-	doc := LoadDocument(url)
-	return ImportTable(doc.Find("table.confluenceTable"))
+func ScrapeWiki(url string) ([]Talk, error) {
+	doc, err := LoadDocument(url)
+	if err != nil {
+		return nil, err
+	}
+	return ImportTable(doc.Find("table.confluenceTable")), nil
 }
 
 func ImportTable(table *goquery.Selection) []Talk {
@@ -43,12 +49,12 @@ func ImportTable(table *goquery.Selection) []Talk {
 	return talks
 }
 
-func LoadDocument(url string) *goquery.Document {
+func LoadDocument(url string) (*goquery.Document, error) {
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return doc
+	return doc, nil
 }
 
 func usage() {
@@ -57,16 +63,15 @@ func usage() {
 	os.Exit(2)
 }
 
-func GetAccessToken() string {
+func GetAccessToken() (string, error) {
 	flag.Usage = usage
 	flag.Parse()
 
 	args := flag.Args()
 	if len(args) < 1 {
-		fmt.Println("Access token is missing.")
-		os.Exit(1)
+		return "", errors.New("access token is missing")
 	}
-	return args[0]
+	return args[0], nil
 }
 
 func InitClient(ctx context.Context, token string) *github.Client {
@@ -86,22 +91,36 @@ func NewIssue(talk Talk) *github.IssueRequest {
 	return req
 }
 
-func CreateIssues(token string, talks []Talk) {
+func CreateIssues(token string, talks []Talk) error {
 	ctx := context.Background()
 	client := InitClient(ctx, token)
 	for _, talk := range talks {
 		req := NewIssue(talk)
 		issue, _, err := client.Issues.Create(ctx, "jcoyne", "bl-test", req)
 		if err != nil {
-			fmt.Printf("ERROR %s", err)
-			os.Exit(1)
+			return err
 		}
 		fmt.Printf("ISSUE %s", issue)
 	}
+	return nil
+}
+
+func HandleError(err error) {
+	fmt.Printf("ERROR %s\n", err)
+	os.Exit(1)
 }
 
 func main() {
-	token := GetAccessToken()
-	talks := ScrapeWiki("https://wiki.duraspace.org/display/samvera/Suggestions+for+Samvera+Connect+2017+Program")
-	CreateIssues(token, talks)
+	token, err := GetAccessToken()
+	if err != nil {
+		HandleError(err)
+	}
+	var url = "https://wiki.duraspace.org/display/samvera/Suggestions+for+Samvera+Connect+2017+Program"
+	talks, err2 := ScrapeWiki(url)
+	if err2 != nil {
+		HandleError(err2)
+	}
+	if err = CreateIssues(token, talks); err != nil {
+		HandleError(err)
+	}
 }
