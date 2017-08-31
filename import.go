@@ -60,18 +60,16 @@ func LoadDocument(url string) (*goquery.Document, error) {
 func usage() {
 	fmt.Fprintf(os.Stderr, "usage: import [ACCESS_TOKEN]\n")
 	flag.PrintDefaults()
-	os.Exit(2)
 }
 
 func GetAccessToken() (string, error) {
 	flag.Usage = usage
 	flag.Parse()
-
-	args := flag.Args()
-	if len(args) < 1 {
+	if flag.NArg() == 0 {
+		flag.Usage()
 		return "", errors.New("access token is missing")
 	}
-	return args[0], nil
+	return flag.Args()[0], nil
 }
 
 func InitClient(ctx context.Context, token string) *github.Client {
@@ -106,14 +104,14 @@ func CreateIssues(token string, talks []Talk) error {
 }
 
 func HandleError(err error) {
-	fmt.Printf("ERROR %s\n", err)
+	fmt.Fprintf(os.Stderr, "ERROR %s\n", err)
 	os.Exit(1)
 }
 
 func main() {
 	token, err := GetAccessToken()
 	if err != nil {
-		HandleError(err)
+		os.Exit(1)
 	}
 	var url = "https://wiki.duraspace.org/display/samvera/Suggestions+for+Samvera+Connect+2017+Program"
 	talks, err2 := ScrapeWiki(url)
