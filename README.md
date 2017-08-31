@@ -3,10 +3,13 @@
 ## Building
 You must have go (https://golang.org/) installed.
 
-Then run these commands:
+Then fetch dependencies:
 ```
-% go get github.com/google/go-github/github
-% go get github.com/PuerkitoBio/goquery
+% go get -d
+```
+
+Build the binary:
+```
 % go build import.go
 ```
 
