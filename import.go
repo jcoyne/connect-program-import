@@ -24,15 +24,15 @@ func (talk Talk) String() string {
 	return fmt.Sprintf("%s\n\nSuggested by: %s\nPresenter: %s\nFormat: %s\nAudience: %s", talk.title, talk.suggestedBy, talk.presenter, talk.format, talk.audience)
 }
 
-func ScrapeWiki(url string) ([]Talk, error) {
-	doc, err := LoadDocument(url)
+func scrapeWiki(url string) ([]Talk, error) {
+	doc, err := loadDocument(url)
 	if err != nil {
 		return nil, err
 	}
-	return ImportTable(doc.Find("table.confluenceTable")), nil
+	return importTable(doc.Find("table.confluenceTable")), nil
 }
 
-func ImportTable(table *goquery.Selection) []Talk {
+func importTable(table *goquery.Selection) []Talk {
 	var talks []Talk
 	table.Find("tbody tr").Each(func(i int, row *goquery.Selection) {
 		talk := &Talk{
@@ -49,7 +49,7 @@ func ImportTable(table *goquery.Selection) []Talk {
 	return talks
 }
 
-func LoadDocument(url string) (*goquery.Document, error) {
+func loadDocument(url string) (*goquery.Document, error) {
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func usage() {
 	flag.PrintDefaults()
 }
 
-func GetAccessToken() (string, error) {
+func getAccessToken() (string, error) {
 	flag.Usage = usage
 	flag.Parse()
 	if flag.NArg() == 0 {
@@ -72,7 +72,7 @@ func GetAccessToken() (string, error) {
 	return flag.Args()[0], nil
 }
 
-func InitClient(ctx context.Context, token string) *github.Client {
+func initClient(ctx context.Context, token string) *github.Client {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
 	)
@@ -81,7 +81,7 @@ func InitClient(ctx context.Context, token string) *github.Client {
 	return github.NewClient(tc)
 }
 
-func NewIssue(talk Talk) *github.IssueRequest {
+func newIssue(talk Talk) *github.IssueRequest {
 	req := new(github.IssueRequest)
 	req.Title = &talk.title
 	body := fmt.Sprintf("%s", talk)
@@ -89,11 +89,11 @@ func NewIssue(talk Talk) *github.IssueRequest {
 	return req
 }
 
-func CreateIssues(token string, talks []Talk) error {
+func createIssues(token string, talks []Talk) error {
 	ctx := context.Background()
-	client := InitClient(ctx, token)
+	client := initClient(ctx, token)
 	for _, talk := range talks {
-		req := NewIssue(talk)
+		req := newIssue(talk)
 		issue, _, err := client.Issues.Create(ctx, "jcoyne", "bl-test", req)
 		if err != nil {
 			return err
@@ -103,22 +103,22 @@ func CreateIssues(token string, talks []Talk) error {
 	return nil
 }
 
-func HandleError(err error) {
+func handleError(err error) {
 	fmt.Fprintf(os.Stderr, "ERROR %s\n", err)
 	os.Exit(1)
 }
 
 func main() {
-	token, err := GetAccessToken()
+	token, err := getAccessToken()
 	if err != nil {
 		os.Exit(1)
 	}
 	var url = "https://wiki.duraspace.org/display/samvera/Suggestions+for+Samvera+Connect+2017+Program"
-	talks, err2 := ScrapeWiki(url)
+	talks, err2 := scrapeWiki(url)
 	if err2 != nil {
-		HandleError(err2)
+		handleError(err2)
 	}
-	if err = CreateIssues(token, talks); err != nil {
-		HandleError(err)
+	if err = createIssues(token, talks); err != nil {
+		handleError(err)
 	}
 }
