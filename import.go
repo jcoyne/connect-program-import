@@ -96,17 +96,38 @@ func isValidFormat(format string) bool {
 	return false
 }
 
+func isValidAudience(audience string) bool {
+	switch audience {
+	case
+		"All",
+		"Developers",
+		"Managers",
+		"System Administrators",
+		"Metadata":
+		return true
+	}
+	return false
+}
+
 func newIssue(talk Talk) *github.IssueRequest {
 	req := new(github.IssueRequest)
 	req.Title = &talk.title
 	body := fmt.Sprintf("%s", talk)
 	req.Body = &body
+	var labels []string
 
 	if isValidFormat(talk.format) {
-		var labels []string
 		labels = append(labels, talk.format)
+	}
+
+	if isValidAudience(talk.audience) {
+		labels = append(labels, talk.audience)
+	}
+
+	if labels != nil {
 		req.Labels = &labels
 	}
+
 	return req
 }
 
