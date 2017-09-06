@@ -81,11 +81,32 @@ func initClient(ctx context.Context, token string) *github.Client {
 	return github.NewClient(tc)
 }
 
+func isValidFormat(format string) bool {
+	switch format {
+	case
+		"Breakout",
+		"Lightning talk",
+		"Panel",
+		"Plenary",
+		"Presentation",
+		"Unconference",
+		"Workshop":
+		return true
+	}
+	return false
+}
+
 func newIssue(talk Talk) *github.IssueRequest {
 	req := new(github.IssueRequest)
 	req.Title = &talk.title
 	body := fmt.Sprintf("%s", talk)
 	req.Body = &body
+
+	if isValidFormat(talk.format) {
+		var labels []string
+		labels = append(labels, talk.format)
+		req.Labels = &labels
+	}
 	return req
 }
 
