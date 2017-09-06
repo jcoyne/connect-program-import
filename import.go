@@ -132,17 +132,26 @@ func newIssue(talk Talk) *github.IssueRequest {
 	return req
 }
 
-func createIssues(token string, talks []Talk) error {
+func createIssues(token string, talks []Talk, dryRun bool, skipTo int) error {
 	ctx := context.Background()
 	client := initClient(ctx, token)
-	for _, talk := range talks {
-		req := newIssue(talk)
-		issue, _, err := client.Issues.Create(ctx, "samvera-labs", "samvera-connect", req)
-		if err != nil {
-			return err
+	for index, talk := range talks {
+		if skipTo > index {
+			continue
 		}
-		fmt.Printf("ISSUE %s", issue)
-		time.Sleep(1 * time.Second)
+		req := newIssue(talk)
+		message := talk.title
+		if !dryRun {
+			issue, _, err := client.Issues.Create(ctx, "samvera-labs", "samvera-connect", req)
+			if err != nil {
+				return err
+			}
+			message = fmt.Sprintf("%s", issue)
+		}
+		fmt.Printf("ISSUE %d %s\n", index, message)
+		if !dryRun {
+			time.Sleep(1 * time.Second)
+		}
 	}
 	return nil
 }
@@ -162,7 +171,9 @@ func main() {
 	if err2 != nil {
 		handleError(err2)
 	}
-	if err = createIssues(token, talks); err != nil {
+	dryRun := false
+	skipTo := 0
+	if err = createIssues(token, talks, dryRun, skipTo); err != nil {
 		handleError(err)
 	}
 }
