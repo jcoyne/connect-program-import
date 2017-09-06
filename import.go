@@ -137,7 +137,7 @@ func createIssues(token string, talks []Talk) error {
 	client := initClient(ctx, token)
 	for _, talk := range talks {
 		req := newIssue(talk)
-		issue, _, err := client.Issues.Create(ctx, "jcoyne", "bl-test", req)
+		issue, _, err := client.Issues.Create(ctx, "samvera-labs", "samvera-connect", req)
 		if err != nil {
 			return err
 		}
