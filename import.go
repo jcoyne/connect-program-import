@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/google/go-github/github"
@@ -141,6 +142,7 @@ func createIssues(token string, talks []Talk) error {
 			return err
 		}
 		fmt.Printf("ISSUE %s", issue)
+		time.Sleep(1 * time.Second)
 	}
 	return nil
 }
